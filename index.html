@@ -3,6 +3,8 @@
 <html>
 <head>
     <title>Stopwatch</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" type="text/css" href="styles.css">
     <link id="fontLink" rel="stylesheet">
 </head>
@@ -27,8 +29,16 @@
                 <input type="text" id="seconds" disabled>
             </div>
         </div>
-        <label for="fontName">Font Name</label>
-        <input type="text" id="fontName" disabled>
+        <div id="fontSettings">
+            <div>
+                <label for="googleFontsImport">Google Fonts @import</label>
+                <input type="text" id="googleFontsImport" disabled>
+            </div>
+            <div>
+                <label for="fontName">Font Name</label>
+                <input type="text" id="fontName" disabled>
+            </div>
+        </div>
         <label for="glow">Glow</label>
         <input type="checkbox" id="glow" disabled>
         <label for="glowStrength">Glow Strength</label>

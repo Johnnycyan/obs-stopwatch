@@ -65,6 +65,23 @@ input[type="text"] {
     text-align: center;
 }
 
+#fontSettings {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+#fontSettings > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-right: 10px;
+}
+
+#googleFontsImport {
+    width: 300px;
+}
+
 #fontName {
     width: 200px;
 }

@@ -10,6 +10,7 @@ const resetButton = document.getElementById('reset');
 const hoursInput = document.getElementById('hours');
 const minutesInput = document.getElementById('minutes');
 const secondsInput = document.getElementById('seconds');
+const googleFontsImportInput = document.getElementById('googleFontsImport');
 const fontNameInput = document.getElementById('fontName');
 const glowCheckbox = document.getElementById('glow');
 const glowStrengthSlider = document.getElementById('glowStrength');
@@ -97,12 +98,14 @@ hoursInput.addEventListener('input', updateElapsedTime);
 minutesInput.addEventListener('input', updateElapsedTime);
 secondsInput.addEventListener('input', updateElapsedTime);
 
+googleFontsImportInput.addEventListener('input', function() {
+    const fontLink = document.getElementById('fontLink');
+    fontLink.href = googleFontsImportInput.value;
+    saveTimerData();
+});
+
 fontNameInput.addEventListener('input', function() {
     document.body.style.fontFamily = fontNameInput.value;
-    if (document.body.style.fontFamily !== 'Arial, sans-serif') {
-        const fontLink = document.getElementById('fontLink');
-        fontLink.href = `https://fonts.googleapis.com/css?family=${encodeURIComponent(document.body.style.fontFamily)}`;
-    }
     saveTimerData();
 });
 
@@ -126,6 +129,7 @@ function disableSettings() {
     hoursInput.disabled = true;
     minutesInput.disabled = true;
     secondsInput.disabled = true;
+    googleFontsImportInput.disabled = true;
     fontNameInput.disabled = true;
     glowCheckbox.disabled = true;
     glowStrengthSlider.disabled = true;
@@ -135,6 +139,7 @@ function enableSettings() {
     hoursInput.disabled = false;
     minutesInput.disabled = false;
     secondsInput.disabled = false;
+    googleFontsImportInput.disabled = false;
     fontNameInput.disabled = false;
     glowCheckbox.disabled = false;
     if (glowCheckbox.checked) {
@@ -145,6 +150,7 @@ function enableSettings() {
 function saveTimerData() {
     const data = {
         elapsedTime: elapsedTime,
+        googleFontsImport: googleFontsImportInput.value,
         fontName: document.body.style.fontFamily,
         glow: glowCheckbox.checked,
         glowStrength: glowStrengthSlider.value,
@@ -157,6 +163,7 @@ function loadTimerData() {
     const data = JSON.parse(localStorage.getItem('timerData'));
     if (data) {
         elapsedTime = data.elapsedTime;
+        googleFontsImportInput.value = data.googleFontsImport;
         document.body.style.fontFamily = data.fontName;
         glowCheckbox.checked = data.glow;
         glowStrengthSlider.value = data.glowStrength;
@@ -164,10 +171,8 @@ function loadTimerData() {
         if (data.glow) {
             stopwatch.classList.add('glow');
         }
-        if (data.fontName !== 'Arial, sans-serif') {
-            const fontLink = document.getElementById('fontLink');
-            fontLink.href = `https://fonts.googleapis.com/css?family=${encodeURIComponent(data.fontName)}`;
-        }
+        const fontLink = document.getElementById('fontLink');
+        fontLink.href = data.googleFontsImport;
         setTimeInputs();
         setFontNameInput();
         updateGlowStrength();
