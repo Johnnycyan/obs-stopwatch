@@ -26,3 +26,8 @@
 
 6. Enter that link in the "Google Fonts @import" box
 7. Enter the font name in the "Font Name" box, in this example it would be: Archivo Black
+
+## Customize Font
+If you want a Google Font to have a specific weight or italics etc. just specify a "One-value" in the Google Font settings before grabbing the @import link
+
+![image](https://github.com/Johnnycyan/obs-stopwatch/assets/24556317/3d6ccb58-e381-49b8-91a2-4639bae58ac8)
