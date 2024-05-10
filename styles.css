@@ -1,0 +1,76 @@
+/* styles.css */
+body {
+    text-align: center;
+    font-family: Arial, sans-serif;
+    color: white;
+}
+
+#stopwatch {
+    font-size: 240px;
+    margin-top: 50px;
+    margin-bottom: 50px;
+}
+
+#stopwatch.glow {
+    filter: drop-shadow(0 0 30px rgba(255, 255, 255, var(--glow-opacity))) drop-shadow(0 0 30px rgba(255, 255, 255, calc(var(--glow-opacity)))) drop-shadow(0 0 30px rgba(255, 255, 255, var(--glow-opacity)));
+}
+
+#buttons {
+    margin-top: 20px;
+}
+
+button {
+    font-size: 36px;
+    padding: 10px 20px;
+    margin: 0 10px;
+    background-color: #212121;
+    color: white;
+    border-color: #424242;
+    border-radius: 10px;
+}
+
+#settings {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#timeInputs {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.time-input {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-right: 10px;
+}
+
+.time-input label {
+    font-size: 18px;
+    margin-bottom: 5px;
+}
+
+input[type="text"] {
+    padding: 5px;
+    font-size: 18px;
+    background-color: #424242;
+    color: white;
+    border-color: #616161;
+    border-radius: 5px;
+    width: 50px;
+    text-align: center;
+}
+
+#fontName {
+    width: 200px;
+}
+
+input[type="checkbox"],
+input[type="range"] {
+    transform: scale(1.5);
+    margin-top: 5px;
+}
