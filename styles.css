@@ -12,7 +12,7 @@ body {
 }
 
 #stopwatch.glow {
-    filter: drop-shadow(0 0 30px rgba(255, 255, 255, var(--glow-opacity))) drop-shadow(0 0 30px rgba(255, 255, 255, calc(var(--glow-opacity)))) drop-shadow(0 0 30px rgba(255, 255, 255, var(--glow-opacity)));
+    filter: drop-shadow(0 0 30px rgba(128, 128, 128, var(--glow-opacity))) drop-shadow(0 0 30px rgba(128, 128, 128, calc(var(--glow-opacity)))) drop-shadow(0 0 30px rgba(128, 128, 128, var(--glow-opacity)));
 }
 
 #buttons {
