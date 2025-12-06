@@ -10,6 +10,26 @@
 9. You can resize the source afterwards to make it the size you want but don't change it in the properties
 10. When resizing sources in OBS it is best to right-click them and set Scale Filtering to Area
 
+# Control from Stream Deck via OBS WebSocket
+1. Make sure OBS WebSocket is enabled (OBS 28+ has it built in). Note the host, port (default 4455), and password.
+2. In the browser source Interact view enable "OBS WebSocket Control". Enter host/port/password and click Connect. (Credentials are stored locally in your browser source.)
+3. In Stream Deck, download the "Multi OBS Controller" plugin, add the "Raw WS Request" Key, configure the OBS websocket info in the "General Configuration" section, and then set the "Request Type" to `BroadcastCustomEvent` the "Request Data" for Starting the timer is:
+	 ```json
+	 {
+		"eventData": {
+			"source": "obs-stopwatch",
+			"action": "start"
+		}
+	}
+	 ```
+	 Other actions are:
+	 - Stop: set `"action": "stop"`
+	 - Reset: `"action": "reset"`
+	 - Toggle: `"action": "toggle"`
+	 - Set time: `"action": "set", "milliseconds": 90500` (sets to 1m30.5s)
+4. If you change the realm in the html Settings, update `"source"` in the Stream Deck key to match.
+5. Leave the browser source visible while connecting so you can see status. Once connected, the Start/Stop/Reset buttons in Stream Deck will control the timer.
+
 # Getting Google Fonts
 1. Go to [Google Fonts](https://fonts.google.com/)
 2. Select a font

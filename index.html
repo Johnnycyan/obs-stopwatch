@@ -9,7 +9,10 @@
     <link id="fontLink" rel="stylesheet">
 </head>
 <body>
-    <div id="stopwatch">00:00:00</div>
+    <div id="stopwatch-wrapper">
+        <div id="stopwatch">00:00:00</div>
+        <div id="stopwatch-glow" aria-hidden="true">00:00:00</div>
+    </div>
     <div id="buttons">
         <button id="startStop">Start/Stop</button>
         <button id="reset">Reset</button>
@@ -39,10 +42,48 @@
                 <input type="text" id="fontName" disabled>
             </div>
         </div>
-        <label for="glow">Glow</label>
-        <input type="checkbox" id="glow" disabled>
-        <label for="glowStrength">Glow Strength</label>
-        <input type="range" id="glowStrength" min="1" max="5" step="1" value="3" disabled>
+        <div id="animGradientSettings">
+            <div class="gradient-row">
+                <label for="animGradient">Animated Gradient</label>
+                <input type="checkbox" id="animGradient" disabled>
+            </div>
+            <div class="gradient-row">
+                <label for="gradientColor1">Color 1</label>
+                <input type="text" id="gradientColor1" value="#00ff00" placeholder="#00ff00" disabled>
+                <label for="gradientColor2">Color 2</label>
+                <input type="text" id="gradientColor2" value="#00d9ff" placeholder="#00d9ff" disabled>
+            </div>
+            <div class="gradient-row">
+                <label for="gradientSpeed">Speed (s)</label>
+                <input type="number" id="gradientSpeed" value="10" min="1" max="60" disabled>
+            </div>
+            <div class="gradient-row">
+                <label for="gradientGlow">Glow Opacity</label>
+                <input type="range" id="gradientGlow" min="0" max="10" step="1" value="2" disabled>
+            </div>
+        </div>
+        <div id="obsWsSettings">
+            <div class="obs-row">
+                <label for="obsWsEnabled">OBS WebSocket Control</label>
+                <input type="checkbox" id="obsWsEnabled">
+            </div>
+            <div class="obs-row">
+                <label for="obsWsHost">Host</label>
+                <input type="text" id="obsWsHost" value="localhost">
+                <label for="obsWsPort">Port</label>
+                <input type="text" id="obsWsPort" value="4455">
+            </div>
+            <div class="obs-row">
+                <label for="obsWsPassword">Password</label>
+                <input type="password" id="obsWsPassword" placeholder="OBS WebSocket password">
+            </div>
+            <div class="obs-row">
+                <label for="obsWsRealm">Realm</label>
+                <input type="text" id="obsWsRealm" value="obs-stopwatch">
+                <button id="obsWsConnect" type="button">Connect</button>
+                <span id="obsWsStatus" aria-live="polite">Disconnected</span>
+            </div>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
