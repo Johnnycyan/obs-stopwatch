@@ -3,6 +3,7 @@ let startTime;
 let elapsedTime = 0;
 let timerInterval;
 let isRunning = false;
+let saveTimerDataInterval = 0;
 
 const stopwatch = document.getElementById('stopwatch');
 const stopwatchGlow = document.getElementById('stopwatch-glow');
@@ -36,6 +37,9 @@ let gradientAnimationId = null;
 const OBS_EVENT_SUBSCRIPTIONS_GENERAL = 0x00000001; // enough to receive CustomEvent
 
 function formatTime(time) {
+    if (time === undefined || time === null || Number.isNaN(time)) {
+        time = 0;
+    }
     const hours = Math.floor(time / 3600000).toString().padStart(2, '0');
     const minutes = Math.floor((time % 3600000) / 60000).toString().padStart(2, '0');
     const seconds = Math.floor((time % 60000) / 1000).toString().padStart(2, '0');
@@ -52,10 +56,15 @@ function startTimer() {
 
 function stopTimer() {
     clearInterval(timerInterval);
-    elapsedTime += Date.now() - startTime;
+    if (startTime !== undefined) {
+        elapsedTime += Date.now() - startTime;
+    }
+    startTime = undefined;
     isRunning = false;
     enableSettings();
     setTimeInputs();
+    clearInterval(saveTimerDataInterval);
+    saveTimerData();
 }
 
 function resetTimer() {
@@ -89,11 +98,12 @@ function setFontNameInput() {
     fontNameInput.value = fontFamily.replace(/["']/g, '');
 }
 
-startStopButton.addEventListener('click', function() {
+startStopButton.addEventListener('click', function () {
     if (isRunning) {
         stopTimer();
     } else {
         startTimer();
+        saveTimerDataInterval = setInterval(saveTimerDataOngoing, 1000);
     }
     saveTimerData();
 });
@@ -119,13 +129,39 @@ hoursInput.addEventListener('input', updateElapsedTime);
 minutesInput.addEventListener('input', updateElapsedTime);
 secondsInput.addEventListener('input', updateElapsedTime);
 
-googleFontsImportInput.addEventListener('input', function() {
+function extractGoogleFontName(input) {
+    const url = input.value;
+    const regex = /https?:\/\/fonts\.googleapis\.com\/css2\?family=([^&:]+)/;
+    const match = url.match(regex);
+    if (match) {
+        return match[1].replace(/\+/g, ' ');
+    }
+    return '';
+}
+
+function extractGoogleFontUrl(input) {
+    const rawValue = input.value;
+    const regex = /https?:\/\/fonts\.googleapis\.com\/css2\?[^'"\)\s]+/;
+    const match = rawValue.match(regex);
+    if (match) {
+        return match[0];
+    }
+    return '';
+}
+
+googleFontsImportInput.addEventListener('input', function () {
+    const extractedUrl = extractGoogleFontUrl(googleFontsImportInput);
+    if (extractedUrl && extractedUrl !== googleFontsImportInput.value) {
+        googleFontsImportInput.value = extractedUrl;
+    }
     const fontLink = document.getElementById('fontLink');
     fontLink.href = googleFontsImportInput.value;
+    fontNameInput.value = extractGoogleFontName(googleFontsImportInput);
+    document.body.style.fontFamily = fontNameInput.value;
     saveTimerData();
 });
 
-fontNameInput.addEventListener('input', function() {
+fontNameInput.addEventListener('input', function () {
     document.body.style.fontFamily = fontNameInput.value;
     saveTimerData();
 });
@@ -144,7 +180,7 @@ function startGradientAnimation() {
     if (gradientAnimationId) {
         cancelAnimationFrame(gradientAnimationId);
     }
-    
+
     const color1 = hexToRgb(gradientColor1Input.value);
     const color2 = hexToRgb(gradientColor2Input.value);
     const duration = (parseInt(gradientSpeedInput.value) || 10) * 1000;
@@ -167,7 +203,7 @@ function startGradientAnimation() {
         if (!animGradientCheckbox.checked) {
             return;
         }
-        
+
         const elapsed = (Date.now() - animStartTime) % duration;
         const progress = elapsed / duration;
         const t = (Math.sin(progress * Math.PI * 2 - Math.PI / 2) + 1) / 2;
@@ -176,7 +212,7 @@ function startGradientAnimation() {
         const c2 = getColor(color2, color1, t);
 
         const gradient = `linear-gradient(215deg, rgb(${c1.r},${c1.g},${c1.b}), rgb(${c2.r},${c2.g},${c2.b}))`;
-        
+
         // Advanced dual-color glow matching the gradient
         const glowColor1 = `rgba(${c1.r},${c1.g},${c1.b},${glowOpacity})`;
         const glowColor2 = `rgba(${c2.r},${c2.g},${c2.b},${glowOpacity})`;
@@ -189,7 +225,7 @@ function startGradientAnimation() {
         stopwatch.style.webkitTextFillColor = 'transparent';
         stopwatch.style.backgroundClip = 'text';
         stopwatch.style.textShadow = 'none';
-        
+
         // Apply glow to separate background layer
         if (glowOpacity > 0) {
             stopwatchGlow.style.color = 'transparent';
@@ -228,7 +264,7 @@ function stopGradientAnimation() {
     stopwatchGlow.style.color = '';
 }
 
-animGradientCheckbox.addEventListener('change', function() {
+animGradientCheckbox.addEventListener('change', function () {
     if (animGradientCheckbox.checked) {
         startGradientAnimation();
         gradientColor1Input.disabled = false;
@@ -245,42 +281,42 @@ animGradientCheckbox.addEventListener('change', function() {
     saveTimerData();
 });
 
-gradientColor1Input.addEventListener('input', function() {
+gradientColor1Input.addEventListener('input', function () {
     if (animGradientCheckbox.checked) {
         startGradientAnimation();
     }
     saveTimerData();
 });
 
-gradientColor2Input.addEventListener('input', function() {
+gradientColor2Input.addEventListener('input', function () {
     if (animGradientCheckbox.checked) {
         startGradientAnimation();
     }
     saveTimerData();
 });
 
-gradientSpeedInput.addEventListener('input', function() {
+gradientSpeedInput.addEventListener('input', function () {
     if (animGradientCheckbox.checked) {
         startGradientAnimation();
     }
     saveTimerData();
 });
 
-gradientGlowInput.addEventListener('input', function() {
+gradientGlowInput.addEventListener('input', function () {
     if (animGradientCheckbox.checked) {
         startGradientAnimation();
     }
     saveTimerData();
 });
 
-obsWsEnabledCheckbox.addEventListener('change', function() {
+obsWsEnabledCheckbox.addEventListener('change', function () {
     if (!obsWsEnabledCheckbox.checked) {
         disconnectObs('Disabled');
     }
     saveTimerData();
 });
 
-obsWsConnectButton.addEventListener('click', function() {
+obsWsConnectButton.addEventListener('click', function () {
     if (!obsWsEnabledCheckbox.checked) {
         obsWsEnabledCheckbox.checked = true;
     }
@@ -388,14 +424,14 @@ function handleCustomEvent(eventData) {
 async function sha256Base64(input) {
     // Minimal SHA-256 implementation for OBS browser source (no WebCrypto)
     // Based on the public domain implementation
-    
+
     function bytesToBase64(bytes) {
         const lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
         let base64 = '';
         const len = bytes.length;
         const rem = len % 3;
         const mainLen = len - rem;
-        
+
         for (let i = 0; i < mainLen; i += 3) {
             const chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
             base64 += lookup[(chunk >> 18) & 0x3f];
@@ -403,7 +439,7 @@ async function sha256Base64(input) {
             base64 += lookup[(chunk >> 6) & 0x3f];
             base64 += lookup[chunk & 0x3f];
         }
-        
+
         if (rem === 1) {
             const chunk = bytes[mainLen];
             base64 += lookup[(chunk >> 2) & 0x3f];
@@ -416,7 +452,7 @@ async function sha256Base64(input) {
             base64 += lookup[(chunk << 2) & 0x3f];
             base64 += '=';
         }
-        
+
         return base64;
     }
 
@@ -480,7 +516,7 @@ async function sha256Base64(input) {
     // Padding
     m.push(0x80);
     while ((m.length % 64) !== 56) m.push(0);
-    
+
     // Length (64-bit big endian)
     m.push(0, 0, 0, 0); // high 32 bits (assuming length < 2^32)
     m.push((l >>> 24) & 0xff);
@@ -495,12 +531,12 @@ async function sha256Base64(input) {
     // Process blocks
     for (let i = 0; i < m.length; i += 64) {
         const W = [];
-        
+
         for (let t = 0; t < 16; t++) {
-            W[t] = (m[i + t * 4] << 24) | (m[i + t * 4 + 1] << 16) | 
-                   (m[i + t * 4 + 2] << 8) | m[i + t * 4 + 3];
+            W[t] = (m[i + t * 4] << 24) | (m[i + t * 4 + 1] << 16) |
+                (m[i + t * 4 + 2] << 8) | m[i + t * 4 + 3];
         }
-        
+
         for (let t = 16; t < 64; t++) {
             W[t] = (gamma1(W[t - 2]) + W[t - 7] + gamma0(W[t - 15]) + W[t - 16]) >>> 0;
         }
@@ -678,10 +714,35 @@ function saveTimerData() {
     localStorage.setItem('timerData', JSON.stringify(data));
 }
 
+function saveTimerDataOngoing() {
+    const data = {
+        elapsedTime: Date.now() - startTime + elapsedTime,
+        googleFontsImport: googleFontsImportInput.value,
+        fontName: document.body.style.fontFamily,
+        isRunning: isRunning,
+        obsWs: {
+            enabled: obsWsEnabledCheckbox.checked,
+            host: obsWsHostInput.value,
+            port: obsWsPortInput.value,
+            realm: obsWsRealmInput.value,
+            password: obsWsPasswordInput.value
+        },
+        animGradient: {
+            enabled: animGradientCheckbox.checked,
+            color1: gradientColor1Input.value,
+            color2: gradientColor2Input.value,
+            speed: gradientSpeedInput.value,
+            glow: gradientGlowInput.value
+        }
+    };
+    localStorage.setItem('timerData', JSON.stringify(data));
+    console.log("Data Saved. Elapsed Time: " + data.elapsedTime);
+}
+
 function loadTimerData() {
     const data = JSON.parse(localStorage.getItem('timerData'));
     if (data) {
-        elapsedTime = data.elapsedTime;
+        elapsedTime = Number(data.elapsedTime) || 0;
         googleFontsImportInput.value = data.googleFontsImport;
         document.body.style.fontFamily = data.fontName;
         isRunning = data.isRunning;
@@ -703,10 +764,12 @@ function loadTimerData() {
             startGradientAnimation();
         }
         const fontLink = document.getElementById('fontLink');
-        fontLink.href = data.googleFontsImport;
+        fontLink.href = extractGoogleFontUrl(googleFontsImportInput);
         setTimeInputs();
         setFontNameInput();
         if (isRunning) {
+            // Reset isRunning so startTimer() doesn't early-return
+            isRunning = false;
             startTimer();
         } else {
             enableSettings();
@@ -726,3 +789,4 @@ function loadTimerData() {
 }
 
 loadTimerData();
+stopTimer();
