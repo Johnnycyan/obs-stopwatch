@@ -104,7 +104,8 @@ These switch to countdown mode and perform the action:
 
 5. Click "Copy code"
 
-![image](https://github.com/Johnnycyan/obs-stopwatch/assets/24556317/60a97b2e-6fbf-4426-af84-a31033e4200b)
+![image](https://github.com/user-attachments/assets/e8d12b47-17ef-40ec-9797-6ac3cf2df720)
+
 
 6. Enter that in the "Google Fonts Code" box
 7. It should auto-populate the correct font name; but if it doesn't you can enter the font name in the "Font Name" box. In this example it would be: Archivo Black
