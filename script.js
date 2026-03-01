@@ -64,7 +64,32 @@ const saveSettingsButton = document.getElementById('saveSettingsBtn');
 const cancelSettingsButton = document.getElementById('cancelSettingsBtn');
 const exportBtn = document.getElementById('exportBtn');
 const importBtn = document.getElementById('importBtn');
-const importFile = document.getElementById('importFile');
+
+const exportModal = document.getElementById('export-modal');
+const exportBackdrop = document.getElementById('export-backdrop');
+const exportTextarea = document.getElementById('exportTextarea');
+const copyExportBtn = document.getElementById('copyExportBtn');
+const closeExportBtn = document.getElementById('closeExportBtn');
+
+const importModal = document.getElementById('import-modal');
+const importBackdrop = document.getElementById('import-backdrop');
+const importTextarea = document.getElementById('importTextarea');
+const submitImportBtn = document.getElementById('submitImportBtn');
+const closeImportBtn = document.getElementById('closeImportBtn');
+
+// Custom Alert
+const alertModal = document.getElementById('alert-modal');
+const alertMessage = document.getElementById('alertMessage');
+const closeAlertBtn = document.getElementById('closeAlertBtn');
+
+function customAlert(message) {
+    alertMessage.textContent = message;
+    alertModal.style.display = 'block';
+}
+
+closeAlertBtn.addEventListener('click', function () {
+    alertModal.style.display = 'none';
+});
 
 // Reset confirmation
 const resetModal = document.getElementById('reset-modal');
@@ -584,35 +609,57 @@ googleFontsImportInput.addEventListener('input', function () {
 // ─── Export / Import ───
 exportBtn.addEventListener('click', function () {
     const data = buildSaveData();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'obs-stopwatch-settings.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    const jsonStr = JSON.stringify(data, null, 2);
+    exportTextarea.value = jsonStr;
+    exportModal.style.display = 'block';
+});
+
+closeExportBtn.addEventListener('click', function () {
+    exportModal.style.display = 'none';
+});
+
+exportBackdrop.addEventListener('click', function () {
+    exportModal.style.display = 'none';
+});
+
+copyExportBtn.addEventListener('click', function () {
+    exportTextarea.select();
+    exportTextarea.setSelectionRange(0, 99999);
 });
 
 importBtn.addEventListener('click', function () {
-    importFile.click();
+    importTextarea.value = '';
+    importModal.style.display = 'block';
 });
 
-importFile.addEventListener('change', function (e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function (ev) {
-        try {
-            const data = JSON.parse(ev.target.result);
-            applyLoadedData(data);
-            saveTimerData();
-            populateSettingsModal();
-        } catch (err) {
-            alert('Invalid settings file.');
+closeImportBtn.addEventListener('click', function () {
+    importModal.style.display = 'none';
+});
+
+importBackdrop.addEventListener('click', function () {
+    importModal.style.display = 'none';
+});
+
+submitImportBtn.addEventListener('click', function () {
+    const text = importTextarea.value.trim();
+    if (!text) {
+        customAlert('Please paste settings JSON first.');
+        return;
+    }
+    try {
+        const data = JSON.parse(text);
+        if (data.obs_stopwatch_settings !== true) {
+            customAlert('Data does not contain valid obs-stopwatch settings.');
+            return;
         }
-    };
-    reader.readAsText(file);
-    importFile.value = '';
+        applyLoadedData(data);
+        saveTimerData();
+        populateSettingsModal();
+        importModal.style.display = 'none';
+        customAlert('Settings imported successfully!');
+    } catch (err) {
+        customAlert('Input data is not valid JSON.');
+    }
 });
 
 // ─── OBS Connect Button ───
@@ -1141,6 +1188,7 @@ function connectObs() {
 // ─── Save / Load ───
 function buildSaveData() {
     return {
+        obs_stopwatch_settings: true,
         elapsedTime: elapsedTime,
         googleFontsImport: googleFontsImportInput.value,
         fontName: document.body.style.fontFamily,

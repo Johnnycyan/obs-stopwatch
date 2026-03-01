@@ -70,11 +70,11 @@ body {
   transition: opacity 0.3s ease;
   background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
-  margin-top: 80px;
-  margin-bottom: 80px;
-  margin-left: 280px;
-  margin-right: 280px;
   border-radius: 16px;
+  width: 350px;
+  height: 120px;
+  left: calc(50% - 175px);
+  top: calc(50% - 60px);
 }
 
 #stopwatch-wrapper:hover #timer-overlay {
@@ -168,6 +168,97 @@ body {
 
 .reset-confirm-buttons button:hover {
   background: #444;
+}
+
+/* --- Export/Import Popups --- */
+.popup-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+.popup-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+}
+
+.popup-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 14px;
+  padding: 24px 32px;
+  width: 480px;
+  max-width: 90vw;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+  text-align: left;
+}
+
+.popup-card h2 {
+  font-size: 20px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.popup-card p {
+  font-size: 14px;
+  color: #ccc;
+  margin-bottom: 16px;
+}
+
+.popup-card textarea {
+  width: 100%;
+  height: 200px;
+  background: #2b2b2b;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: monospace;
+  font-size: 13px;
+  resize: vertical;
+  margin-bottom: 20px;
+}
+
+.popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.popup-actions button {
+  font-size: 14px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: #2a2a2a;
+  color: white;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.popup-actions button:hover {
+  background: #3a3a3a;
+}
+
+#copyExportBtn,
+#submitImportBtn,
+#closeAlertBtn {
+  background: #2979ff;
+  border-color: #2979ff;
+}
+
+#copyExportBtn:hover,
+#submitImportBtn:hover,
+#closeAlertBtn:hover {
+  background: #448aff;
 }
 
 /* --- Settings Modal --- */

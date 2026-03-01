@@ -42,6 +42,32 @@
                 </div>
             </div>
         </div>
+        <!-- Export modal -->
+        <div id="export-modal" class="popup-modal" style="display:none">
+            <div class="popup-backdrop" id="export-backdrop"></div>
+            <div class="popup-card">
+                <h2>Export Settings</h2>
+                <p>Copy the settings below:</p>
+                <textarea id="exportTextarea" readonly></textarea>
+                <div class="popup-actions">
+                    <button id="copyExportBtn" type="button">Select All</button>
+                    <button id="closeExportBtn" type="button">Close</button>
+                </div>
+            </div>
+        </div>
+        <!-- Import modal -->
+        <div id="import-modal" class="popup-modal" style="display:none">
+            <div class="popup-backdrop" id="import-backdrop"></div>
+            <div class="popup-card">
+                <h2>Import Settings</h2>
+                <p>Paste your settings JSON below:</p>
+                <textarea id="importTextarea" placeholder="Paste settings here..."></textarea>
+                <div class="popup-actions">
+                    <button id="submitImportBtn" type="button">Import</button>
+                    <button id="closeImportBtn" type="button">Close</button>
+                </div>
+            </div>
+        </div>
         <!-- Reset confirmation popup -->
         <div id="reset-modal" style="display:none">
             <div id="reset-modal-backdrop"></div>
@@ -277,6 +303,20 @@
                 <div id="modal-actions">
                     <button id="saveSettingsBtn" type="button">Save</button>
                     <button id="cancelSettingsBtn" type="button">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <!-- Custom Alert modal -->
+        <div id="alert-modal" class="popup-modal" style="display:none">
+            <div class="popup-backdrop" id="alert-backdrop"></div>
+            <div class="popup-card" style="width: 400px; text-align: center;">
+                <h2>Alert</h2>
+                <p id="alertMessage"
+                   style="font-size: 16px;
+                          margin: 20px 0;
+                          color: white"></p>
+                <div class="popup-actions" style="justify-content: center;">
+                    <button id="closeAlertBtn" type="button" style="width: 100px;">OK</button>
                 </div>
             </div>
         </div>
