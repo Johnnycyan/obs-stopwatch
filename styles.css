@@ -1,200 +1,502 @@
 /* styles.css */
+
+/* --- Reset & Base --- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 body {
-    text-align: center;
-    font-family: Arial, sans-serif;
-    color: white;
+  text-align: center;
+  font-family: Arial, sans-serif;
+  font-weight: 400;
+  color: white;
+  background: transparent;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --- Timer Display --- */
+#stopwatch-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #stopwatch-wrapper {
-    position: relative;
-    margin-top: 50px;
-    margin-bottom: 50px;
-    margin-left: auto;
-    margin-right: auto;
-    width: fit-content;
+  position: relative;
+  width: fit-content;
+  cursor: default;
 }
 
 #stopwatch {
-    font-size: 240px;
-    position: relative;
-    z-index: 2;
+  font-size: 240px;
+  position: relative;
+  z-index: 2;
+  transition: filter 0.3s ease;
+  user-select: none;
+  white-space: nowrap;
 }
 
 #stopwatch-glow {
-    font-size: 240px;
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
-    pointer-events: none;
-    opacity: 1;
+  font-size: 240px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 1;
+  transition: filter 0.3s ease;
+  user-select: none;
+  white-space: nowrap;
 }
 
-#buttons {
-    margin-top: 20px;
+/* --- Hover Overlay --- */
+#timer-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  margin-top: 80px;
+  margin-bottom: 80px;
+  margin-left: 280px;
+  margin-right: 280px;
+  border-radius: 16px;
 }
 
-button {
-    font-size: 36px;
-    padding: 10px 20px;
-    margin: 0 10px;
-    background-color: #212121;
-    color: white;
-    border-color: #424242;
-    border-radius: 10px;
+#stopwatch-wrapper:hover #timer-overlay {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-#settings {
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+#stopwatch-wrapper:hover #stopwatch,
+#stopwatch-wrapper:hover #stopwatch-glow {
+  filter: blur(6px);
 }
 
-#timeInputs {
-    display: flex;
-    align-items: center;
-    margin-bottom: 20px;
+#timer-overlay button {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.2s,
+    transform 0.2s,
+    border-color 0.2s;
+  padding: 0;
+  font-size: 0;
+}
+
+#timer-overlay button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.12);
+}
+
+#timer-overlay button svg {
+  pointer-events: none;
+}
+
+/* --- Reset Confirmation Popup --- */
+#reset-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+#reset-confirm {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  background: rgba(30, 30, 30, 0.96);
+  border: 1px solid #444;
+  border-radius: 14px;
+  padding: 24px 36px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+#reset-confirm p {
+  font-size: 20px;
+  margin-bottom: 16px;
+}
+
+#reset-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+}
+
+.reset-confirm-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.reset-confirm-buttons button {
+  font-size: 16px;
+  padding: 8px 24px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: #2a2a2a;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reset-confirm-buttons button:hover {
+  background: #444;
+}
+
+/* --- Settings Modal --- */
+#settings-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+#settings-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+}
+
+#settings-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 28px 32px 20px;
+  width: 560px;
+  max-width: 95vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+}
+
+#settings-card h2 {
+  font-size: 22px;
+  margin-bottom: 18px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Scrollbar styling */
+#settings-card::-webkit-scrollbar {
+  width: 6px;
+}
+#settings-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+#settings-card::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 3px;
+}
+
+/* --- Collapsible Sections --- */
+.settings-section {
+  border: 1px solid #333;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  background: #222;
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.2s;
+}
+
+.section-header:hover {
+  background: #2a2a2a;
+}
+
+.section-header .chevron {
+  display: inline-block;
+  font-size: 11px;
+  transition: transform 0.3s ease;
+}
+
+.settings-section.expanded .section-header .chevron {
+  transform: rotate(90deg);
+}
+
+.section-body {
+  max-height: 0;
+  overflow: hidden;
+  transition:
+    max-height 0.35s ease,
+    margin-bottom 0.35s ease;
+  padding: 0 16px;
+}
+
+/* --- Setting Rows --- */
+.setting-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.setting-row label {
+  font-size: 14px;
+  color: #ccc;
+}
+
+/* --- Inputs inside modal --- */
+#settings-card input[type="text"],
+#settings-card input[type="password"] {
+  padding: 6px 10px;
+  font-size: 14px;
+  background: #2b2b2b;
+  color: white;
+  border: 1px solid #555;
+  border-radius: 6px;
+}
+
+#settings-card .wide-input {
+  width: 100%;
+  min-width: 300px;
+  text-align: left;
+}
+
+#settings-card .medium-input {
+  width: 220px;
+  text-align: left;
+}
+
+#settings-card .small-input {
+  width: 70px;
+}
+
+#settings-card .color-input {
+  width: 120px;
+}
+
+.time-sm {
+  width: 46px !important;
+}
+
+.time-inputs-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+}
+
+#resetTimeBtn {
+  font-size: 20px;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background: #2a2a2a;
+  color: #ccc;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-left: 6px;
+  transition: background 0.2s;
+}
+
+#resetTimeBtn:hover {
+  background: #444;
+  color: white;
+}
+
+#settings-card input[type="number"] {
+  width: 70px;
+  padding: 6px 8px;
+  font-size: 14px;
+  background: #2b2b2b;
+  color: white;
+  border: 1px solid #555;
+  border-radius: 6px;
+  text-align: center;
+}
+
+#settings-card input[type="checkbox"] {
+  transform: scale(1.3);
+  margin-right: 6px;
+  accent-color: #4fc3f7;
+}
+
+#settings-card input[type="radio"] {
+  transform: scale(1.2);
+  margin-right: 4px;
+  accent-color: #4fc3f7;
+}
+
+#settings-card input[type="range"] {
+  width: 140px;
+  accent-color: #4fc3f7;
+}
+
+/* Time inputs inside modal */
+.time-set-row {
+  justify-content: center;
 }
 
 .time-input {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-right: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 10px;
 }
 
 .time-input label {
-    font-size: 18px;
-    margin-bottom: 5px;
+  font-size: 13px;
+  margin-bottom: 4px;
 }
 
-input[type="text"] {
-    padding: 5px;
-    font-size: 18px;
-    background-color: #424242;
-    color: white;
-    border-color: #616161;
-    border-radius: 5px;
-    width: 50px;
-    text-align: center;
+/* Slider group */
+.slider-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-#fontSettings {
-    display: flex;
-    align-items: center;
-    margin-bottom: 20px;
+.slider-value {
+  font-size: 14px;
+  color: #aaa;
+  min-width: 28px;
 }
 
-#fontSettings > div {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-right: 10px;
+.color-preview {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  vertical-align: middle;
+  background: #ffffff;
 }
 
-#googleFontsImport {
-    width: 300px;
+/* Sub-settings (countdown options) */
+.sub-settings {
+  display: none;
+  padding-left: 10px;
+  border-left: 2px solid #444;
+  margin-top: 8px;
 }
 
-#fontName {
-    width: 200px;
+#alertUrlRow {
+  display: none;
 }
 
-input[type="checkbox"],
-input[type="range"] {
-    transform: scale(1.5);
-    margin-top: 5px;
-    margin-left: 50px;
+/* --- Modal Action Buttons --- */
+#modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #333;
 }
 
-#animGradientSettings input[type="range"] {
-    width: 120px;
+#modal-actions button {
+  font-size: 14px;
+  padding: 8px 22px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
 }
 
-#animGradientSettings {
-    margin-top: 20px;
-    padding: 10px;
-    border: 1px solid #424242;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 500px;
-    background-color: #1a1a1a;
+#saveSettingsBtn {
+  background: #2979ff;
+  color: white;
+  border-color: #2979ff;
 }
 
-.gradient-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 8px;
+#saveSettingsBtn:hover {
+  background: #448aff;
 }
 
-#animGradientSettings label {
-    font-size: 16px;
+#cancelSettingsBtn {
+  background: #333;
+  color: #ccc;
 }
 
-#animGradientSettings input[type="text"] {
-    width: 80px;
-    padding: 5px;
-    font-size: 14px;
-    background-color: #2b2b2b;
-    color: white;
-    border: 1px solid #616161;
-    border-radius: 5px;
-    text-align: center;
+#cancelSettingsBtn:hover {
+  background: #444;
 }
 
-#animGradientSettings input[type="number"] {
-    width: 60px;
-    padding: 5px;
-    font-size: 16px;
-    background-color: #2b2b2b;
-    color: white;
-    border: 1px solid #616161;
-    border-radius: 5px;
-    text-align: center;
+/* --- Import / Export Buttons --- */
+#exportBtn,
+#importBtn {
+  font-size: 13px;
+  padding: 7px 18px;
+  border-radius: 7px;
+  border: 1px solid #555;
+  background: #2a2a2a;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-#obsWsSettings {
-    margin-top: 20px;
-    padding: 10px;
-    border: 1px solid #424242;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 900px;
-    background-color: #1a1a1a;
+#exportBtn:hover,
+#importBtn:hover {
+  background: #3a3a3a;
 }
 
-.obs-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 8px;
-}
-
-#obsWsSettings label {
-    font-size: 16px;
-}
-
-#obsWsSettings input[type="text"],
-#obsWsSettings input[type="password"] {
-    width: 160px;
-    background-color: #2b2b2b;
-    color: white;
-}
-
+/* --- OBS Status --- */
 #obsWsConnect {
-    font-size: 14px;
-    padding: 4px 10px;
+  font-size: 13px;
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background: #2a2a2a;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#obsWsConnect:hover {
+  background: #3a3a3a;
 }
 
 #obsWsStatus {
-    font-size: 14px;
-    padding: 4px 8px;
-    border-radius: 6px;
-    background-color: #3a3a3a;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #3a3a3a;
 }

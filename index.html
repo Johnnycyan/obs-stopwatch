@@ -1,90 +1,287 @@
 <!-- index.html -->
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Stopwatch</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" type="text/css" href="styles.css">
-    <link id="fontLink" rel="stylesheet">
-</head>
-<body>
-    <div id="stopwatch-wrapper">
-        <div id="stopwatch">00:00:00</div>
-        <div id="stopwatch-glow" aria-hidden="true">00:00:00</div>
-    </div>
-    <div id="buttons">
-        <button id="startStop">Start/Stop</button>
-        <button id="reset">Reset</button>
-    </div>
-    <div id="settings">
-        <div id="timeInputs">
-            <div class="time-input">
-                <label for="hours">Hours</label>
-                <input type="text" id="hours" disabled>
-            </div>
-            <div class="time-input">
-                <label for="minutes">Minutes</label>
-                <input type="text" id="minutes" disabled>
-            </div>
-            <div class="time-input">
-                <label for="seconds">Seconds</label>
-                <input type="text" id="seconds" disabled>
-            </div>
-        </div>
-        <div id="fontSettings">
-            <div>
-                <label for="googleFontsImport">Google Fonts @import</label>
-                <input type="text" id="googleFontsImport" disabled>
-            </div>
-            <div>
-                <label for="fontName">Font Name</label>
-                <input type="text" id="fontName" disabled>
-            </div>
-        </div>
-        <div id="animGradientSettings">
-            <div class="gradient-row">
-                <label for="animGradient">Animated Gradient</label>
-                <input type="checkbox" id="animGradient" disabled>
-            </div>
-            <div class="gradient-row">
-                <label for="gradientColor1">Color 1</label>
-                <input type="text" id="gradientColor1" value="#00ff00" placeholder="#00ff00" disabled>
-                <label for="gradientColor2">Color 2</label>
-                <input type="text" id="gradientColor2" value="#00d9ff" placeholder="#00d9ff" disabled>
-            </div>
-            <div class="gradient-row">
-                <label for="gradientSpeed">Speed (s)</label>
-                <input type="number" id="gradientSpeed" value="10" min="1" max="60" disabled>
-            </div>
-            <div class="gradient-row">
-                <label for="gradientGlow">Glow Opacity</label>
-                <input type="range" id="gradientGlow" min="0" max="10" step="1" value="2" disabled>
+    <head>
+        <title>Stopwatch</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" type="text/css" href="styles.css">
+        <link id="fontLink" rel="stylesheet">
+    </head>
+    <body>
+        <!-- Main timer display - centered on page -->
+        <div id="stopwatch-container">
+            <div id="stopwatch-wrapper">
+                <div id="stopwatch">00:00:00</div>
+                <div id="stopwatch-glow" aria-hidden="true">00:00:00</div>
+                <!-- Hover overlay with action buttons -->
+                <div id="timer-overlay">
+                    <button id="startStop" type="button" title="Start / Pause">
+                        <svg id="playIcon" viewBox="0 0 24 24" width="48" height="48" fill="white">
+                            <polygon points="6,4 20,12 6,20" />
+                        </svg>
+                        <svg id="pauseIcon"
+                             viewBox="0 0 24 24"
+                             width="48"
+                             height="48"
+                             fill="white"
+                             style="display:none">
+                            <rect x="5" y="4" width="4" height="16" /><rect x="15" y="4" width="4" height="16" />
+                        </svg>
+                    </button>
+                    <button id="reset" type="button" title="Reset">
+                        <svg viewBox="0 0 24 24" width="48" height="48" fill="white">
+                            <path d="M17.65 6.35A7.96 7.96 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+                        </svg>
+                    </button>
+                    <button id="settingsBtn" type="button" title="Settings">
+                        <svg viewBox="0 0 24 24" width="48" height="48" fill="white">
+                            <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.6 3.6 0 0112 15.6z" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
-        <div id="obsWsSettings">
-            <div class="obs-row">
-                <label for="obsWsEnabled">OBS WebSocket Control</label>
-                <input type="checkbox" id="obsWsEnabled">
-            </div>
-            <div class="obs-row">
-                <label for="obsWsHost">Host</label>
-                <input type="text" id="obsWsHost" value="localhost">
-                <label for="obsWsPort">Port</label>
-                <input type="text" id="obsWsPort" value="4455">
-            </div>
-            <div class="obs-row">
-                <label for="obsWsPassword">Password</label>
-                <input type="password" id="obsWsPassword" placeholder="OBS WebSocket password">
-            </div>
-            <div class="obs-row">
-                <label for="obsWsRealm">Realm</label>
-                <input type="text" id="obsWsRealm" value="obs-stopwatch">
-                <button id="obsWsConnect" type="button">Connect</button>
-                <span id="obsWsStatus" aria-live="polite">Disconnected</span>
+        <!-- Reset confirmation popup -->
+        <div id="reset-modal" style="display:none">
+            <div id="reset-modal-backdrop"></div>
+            <div id="reset-confirm">
+                <p>Reset timer?</p>
+                <div class="reset-confirm-buttons">
+                    <button id="resetYes" type="button">Yes</button>
+                    <button id="resetNo" type="button">No</button>
+                </div>
             </div>
         </div>
-    </div>
-    <script src="script.js"></script>
-</body>
+        <!-- Settings modal -->
+        <div id="settings-modal" style="display:none">
+            <div id="settings-backdrop"></div>
+            <div id="settings-card">
+                <h2>Settings</h2>
+                <!-- Timer Mode -->
+                <div class="settings-section">
+                    <div class="section-header" data-section="timerMode">
+                        <span class="chevron">&#9654;</span> Timer Mode
+                    </div>
+                    <div class="section-body">
+                        <div class="setting-row">
+                            <label>
+                                <input type="radio" name="timerMode" value="stopwatch" checked>
+                                Stopwatch (count up)
+                            </label>
+                            <label>
+                                <input type="radio" name="timerMode" value="timer">
+                                Timer (countdown)
+                            </label>
+                        </div>
+                        <div id="countdownSettings" class="sub-settings">
+                            <div class="setting-row">
+                                <label>Countdown Duration</label>
+                                <div class="time-inputs-inline">
+                                    <input type="text" id="countdownHours" value="00" class="time-sm">
+                                    :
+                                    <input type="text" id="countdownMinutes" value="00" class="time-sm">
+                                    :
+                                    <input type="text" id="countdownSeconds" value="00" class="time-sm">
+                                </div>
+                            </div>
+                            <div class="setting-row">
+                                <label>
+                                    <input type="checkbox" id="allowNegative">
+                                    Allow negative time
+                                </label>
+                            </div>
+                            <div class="setting-row">
+                                <label>
+                                    <input type="checkbox" id="playAlert">
+                                    Play alert at zero (alert.mp3 or custom URL)
+                                </label>
+                            </div>
+                            <div class="setting-row" id="alertUrlRow">
+                                <label for="alertSoundUrl">Alert sound URL</label>
+                                <input type="text"
+                                       id="alertSoundUrl"
+                                       placeholder="URL or leave blank for alert.mp3"
+                                       class="wide-input">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Set Time -->
+                <div class="settings-section">
+                    <div class="section-header" data-section="setTime">
+                        <span class="chevron">&#9654;</span> <span id="setTimeLabel">Set Time</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="setting-row">
+                            <div class="time-inputs-inline">
+                                <input type="text" id="hours" value="00" class="time-sm">
+                                :
+                                <input type="text" id="minutes" value="00" class="time-sm">
+                                :
+                                <input type="text" id="seconds" value="00" class="time-sm">
+                            </div>
+                            <button id="resetTimeBtn" type="button" title="Reset to 00:00:00">&#8635;</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Text Settings -->
+                <div class="settings-section">
+                    <div class="section-header" data-section="text">
+                        <span class="chevron">&#9654;</span> Text
+                    </div>
+                    <div class="section-body">
+                        <div class="setting-row">
+                            <label for="googleFontsImport">Google Fonts Code</label>
+                            <input type="text" id="googleFontsImport" class="wide-input">
+                        </div>
+                        <div class="setting-row">
+                            <label for="fontName">Font Name</label>
+                            <input type="text" id="fontName" class="medium-input">
+                        </div>
+                        <div class="setting-row">
+                            <label for="fontWeight">Font Weight</label>
+                            <div class="slider-group">
+                                <input type="range"
+                                       id="fontWeight"
+                                       min="100"
+                                       max="900"
+                                       step="50"
+                                       value="400">
+                                <span id="fontWeightValue" class="slider-value">400</span>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label for="textColor">Text Color</label>
+                            <span id="textColorPreview" class="color-preview"></span>
+                            <input type="text"
+                                   id="textColor"
+                                   value="#ffffff"
+                                   class="color-input"
+                                   placeholder="#ffffff">
+                        </div>
+                        <div class="setting-row">
+                            <label>
+                                <input type="checkbox" id="staticGlow">
+                                Static Glow
+                            </label>
+                        </div>
+                        <div class="sub-settings" id="staticGlowSettings">
+                            <div class="setting-row">
+                                <label for="staticGlowOpacity">Glow Opacity</label>
+                                <div class="slider-group">
+                                    <input type="range"
+                                           id="staticGlowOpacity"
+                                           min="0"
+                                           max="10"
+                                           step="1"
+                                           value="3">
+                                    <span id="staticGlowValue" class="slider-value">3</span>
+                                </div>
+                            </div>
+                            <div class="setting-row">
+                                <label for="staticGlowColor">Glow Color</label>
+                                <span id="staticGlowColorPreview"
+                                      class="color-preview"
+                                      style="background:#ffffff"></span>
+                                <input type="text"
+                                       id="staticGlowColor"
+                                       value="#ffffff"
+                                       class="color-input"
+                                       placeholder="#ffffff">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Animated Gradient -->
+                <div class="settings-section">
+                    <div class="section-header" data-section="gradient">
+                        <span class="chevron">&#9654;</span> Animated Gradient
+                    </div>
+                    <div class="section-body">
+                        <div class="setting-row">
+                            <label for="animGradient">Enabled</label>
+                            <input type="checkbox" id="animGradient">
+                        </div>
+                        <div class="setting-row">
+                            <label for="gradientColor1">Color 1</label>
+                            <span id="gradientColor1Preview"
+                                  class="color-preview"
+                                  style="background:#00BFFF"></span>
+                            <input type="text" id="gradientColor1" value="#00BFFF" class="color-input">
+                        </div>
+                        <div class="setting-row">
+                            <label for="gradientColor2">Color 2</label>
+                            <span id="gradientColor2Preview"
+                                  class="color-preview"
+                                  style="background:#FF6EC7"></span>
+                            <input type="text" id="gradientColor2" value="#FF6EC7" class="color-input">
+                        </div>
+                        <div class="setting-row">
+                            <label for="gradientSpeed">Speed (s)</label>
+                            <input type="number" id="gradientSpeed" value="10" min="1" max="60">
+                        </div>
+                        <div class="setting-row">
+                            <label for="gradientGlow">Glow Opacity</label>
+                            <input type="range" id="gradientGlow" min="0" max="10" step="1" value="2">
+                        </div>
+                    </div>
+                </div>
+                <!-- OBS WebSocket -->
+                <div class="settings-section">
+                    <div class="section-header" data-section="obs">
+                        <span class="chevron">&#9654;</span> OBS WebSocket
+                    </div>
+                    <div class="section-body">
+                        <div class="setting-row">
+                            <label for="obsWsEnabled">Enabled</label>
+                            <input type="checkbox" id="obsWsEnabled">
+                        </div>
+                        <div class="setting-row">
+                            <label for="obsWsHost">Host</label>
+                            <input type="text" id="obsWsHost" value="localhost" class="medium-input">
+                            <label for="obsWsPort">Port</label>
+                            <input type="text" id="obsWsPort" value="4455" class="small-input">
+                        </div>
+                        <div class="setting-row">
+                            <label for="obsWsPassword">Password</label>
+                            <input type="password"
+                                   id="obsWsPassword"
+                                   placeholder="OBS WebSocket password"
+                                   class="medium-input">
+                        </div>
+                        <div class="setting-row">
+                            <label for="obsWsRealm">Realm</label>
+                            <input type="text"
+                                   id="obsWsRealm"
+                                   value="obs-stopwatch"
+                                   class="medium-input">
+                            <button id="obsWsConnect" type="button">Connect</button>
+                            <span id="obsWsStatus" aria-live="polite">Disconnected</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Import / Export -->
+                <div class="settings-section">
+                    <div class="section-header" data-section="importExport">
+                        <span class="chevron">&#9654;</span> Import / Export
+                    </div>
+                    <div class="section-body">
+                        <div class="setting-row">
+                            <button id="exportBtn" type="button">Export Settings</button>
+                            <button id="importBtn" type="button">Import Settings</button>
+                            <input type="file" id="importFile" accept=".json" style="display:none">
+                        </div>
+                    </div>
+                </div>
+                <div id="modal-actions">
+                    <button id="saveSettingsBtn" type="button">Save</button>
+                    <button id="cancelSettingsBtn" type="button">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <!-- Hidden audio element for alert -->
+        <audio id="alertAudio" preload="none"></audio>
+        <script src="script.js"></script>
+    </body>
 </html>

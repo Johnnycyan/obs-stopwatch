@@ -5,15 +5,34 @@ let timerInterval;
 let isRunning = false;
 let saveTimerDataInterval = 0;
 
+// Countdown / Timer mode state
+let timerMode = 'stopwatch'; // 'stopwatch' or 'timer'
+let countdownDuration = 0;   // ms
+let allowNegative = false;
+let playAlert = false;
+let alertSoundUrl = '';
+let alertPlayed = false;
+let fontWeight = '400';
+let textColor = '#ffffff';
+let staticGlowEnabled = false;
+let staticGlowOpacity = 3;
+let staticGlowColor = '#ffffff';
+
 const stopwatch = document.getElementById('stopwatch');
 const stopwatchGlow = document.getElementById('stopwatch-glow');
 const startStopButton = document.getElementById('startStop');
+const playIcon = document.getElementById('playIcon');
+const pauseIcon = document.getElementById('pauseIcon');
 const resetButton = document.getElementById('reset');
+const settingsBtn = document.getElementById('settingsBtn');
 const hoursInput = document.getElementById('hours');
 const minutesInput = document.getElementById('minutes');
 const secondsInput = document.getElementById('seconds');
 const googleFontsImportInput = document.getElementById('googleFontsImport');
 const fontNameInput = document.getElementById('fontName');
+const fontWeightInput = document.getElementById('fontWeight');
+const fontWeightValue = document.getElementById('fontWeightValue');
+const setTimeLabel = document.getElementById('setTimeLabel');
 const obsWsEnabledCheckbox = document.getElementById('obsWsEnabled');
 const obsWsHostInput = document.getElementById('obsWsHost');
 const obsWsPortInput = document.getElementById('obsWsPort');
@@ -27,6 +46,47 @@ const gradientColor2Input = document.getElementById('gradientColor2');
 const gradientSpeedInput = document.getElementById('gradientSpeed');
 const gradientGlowInput = document.getElementById('gradientGlow');
 
+// Countdown settings elements
+const countdownHoursInput = document.getElementById('countdownHours');
+const countdownMinutesInput = document.getElementById('countdownMinutes');
+const countdownSecondsInput = document.getElementById('countdownSeconds');
+const allowNegativeCheckbox = document.getElementById('allowNegative');
+const playAlertCheckbox = document.getElementById('playAlert');
+const alertSoundUrlInput = document.getElementById('alertSoundUrl');
+const countdownSettings = document.getElementById('countdownSettings');
+const alertUrlRow = document.getElementById('alertUrlRow');
+const timerModeRadios = document.querySelectorAll('input[name="timerMode"]');
+
+// Modal elements
+const settingsModal = document.getElementById('settings-modal');
+const settingsBackdrop = document.getElementById('settings-backdrop');
+const saveSettingsButton = document.getElementById('saveSettingsBtn');
+const cancelSettingsButton = document.getElementById('cancelSettingsBtn');
+const exportBtn = document.getElementById('exportBtn');
+const importBtn = document.getElementById('importBtn');
+const importFile = document.getElementById('importFile');
+
+// Reset confirmation
+const resetModal = document.getElementById('reset-modal');
+const resetConfirm = document.getElementById('reset-confirm');
+const resetConfirmBackdrop = document.getElementById('reset-confirm-backdrop');
+const resetYes = document.getElementById('resetYes');
+const resetNo = document.getElementById('resetNo');
+
+// Text color / static glow
+const textColorInput = document.getElementById('textColor');
+const textColorPreview = document.getElementById('textColorPreview');
+const staticGlowCheckbox = document.getElementById('staticGlow');
+const staticGlowOpacityInput = document.getElementById('staticGlowOpacity');
+const staticGlowSettings = document.getElementById('staticGlowSettings');
+const staticGlowColorInput = document.getElementById('staticGlowColor');
+const staticGlowColorPreview = document.getElementById('staticGlowColorPreview');
+const gradientColor1Preview = document.getElementById('gradientColor1Preview');
+const gradientColor2Preview = document.getElementById('gradientColor2Preview');
+
+// Audio
+const alertAudio = document.getElementById('alertAudio');
+
 let obsSocket = null;
 let obsHandshakeTimer = null;
 let obsConnected = false;
@@ -34,24 +94,29 @@ let obsLastClose = null;
 let sha256FallbackReady = false;
 let gradientAnimationId = null;
 
-const OBS_EVENT_SUBSCRIPTIONS_GENERAL = 0x00000001; // enough to receive CustomEvent
+const OBS_EVENT_SUBSCRIPTIONS_GENERAL = 0x00000001;
 
+// ─── Format Time ───
 function formatTime(time) {
     if (time === undefined || time === null || Number.isNaN(time)) {
         time = 0;
     }
-    const hours = Math.floor(time / 3600000).toString().padStart(2, '0');
-    const minutes = Math.floor((time % 3600000) / 60000).toString().padStart(2, '0');
-    const seconds = Math.floor((time % 60000) / 1000).toString().padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
+    const negative = time < 0;
+    const abs = Math.abs(time);
+    const hours = Math.floor(abs / 3600000).toString().padStart(2, '0');
+    const minutes = Math.floor((abs % 3600000) / 60000).toString().padStart(2, '0');
+    const seconds = Math.floor((abs % 60000) / 1000).toString().padStart(2, '0');
+    return `${negative ? '-' : ''}${hours}:${minutes}:${seconds}`;
 }
 
+// ─── Timer Core ───
 function startTimer() {
     if (isRunning) return;
     startTime = Date.now();
     timerInterval = setInterval(updateTimer, 10);
     isRunning = true;
-    disableSettings();
+    updatePlayPauseIcon();
+    saveTimerDataInterval = setInterval(saveTimerDataOngoing, 1000);
 }
 
 function stopTimer() {
@@ -61,7 +126,7 @@ function stopTimer() {
     }
     startTime = undefined;
     isRunning = false;
-    enableSettings();
+    updatePlayPauseIcon();
     setTimeInputs();
     clearInterval(saveTimerDataInterval);
     saveTimerData();
@@ -70,8 +135,15 @@ function stopTimer() {
 function resetTimer() {
     stopTimer();
     elapsedTime = 0;
-    stopwatch.textContent = '00:00:00';
-    stopwatchGlow.textContent = '00:00:00';
+    alertPlayed = false;
+    if (timerMode === 'timer') {
+        const formatted = formatTime(countdownDuration);
+        stopwatch.textContent = formatted;
+        stopwatchGlow.textContent = formatted;
+    } else {
+        stopwatch.textContent = '00:00:00';
+        stopwatchGlow.textContent = '00:00:00';
+    }
     setTimeInputs();
     saveTimerData();
 }
@@ -79,11 +151,58 @@ function resetTimer() {
 function updateTimer() {
     const currentTime = Date.now();
     const timeElapsed = currentTime - startTime + elapsedTime;
-    const formatted = formatTime(timeElapsed);
-    stopwatch.textContent = formatted;
-    stopwatchGlow.textContent = formatted;
+
+    if (timerMode === 'timer') {
+        let remaining = countdownDuration - timeElapsed;
+        // Clamp to 0 if negative not allowed
+        if (remaining <= 0 && !allowNegative) {
+            remaining = 0;
+            const formatted = formatTime(0);
+            stopwatch.textContent = formatted;
+            stopwatchGlow.textContent = formatted;
+            // Play alert at zero
+            if (playAlert && !alertPlayed) {
+                alertPlayed = true;
+                playAlertSound();
+            }
+            stopTimer();
+            return;
+        }
+        // Play alert when crossing zero (allow negative case)
+        if (remaining <= 0 && playAlert && !alertPlayed) {
+            alertPlayed = true;
+            playAlertSound();
+        }
+        const formatted = formatTime(remaining);
+        stopwatch.textContent = formatted;
+        stopwatchGlow.textContent = formatted;
+    } else {
+        const formatted = formatTime(timeElapsed);
+        stopwatch.textContent = formatted;
+        stopwatchGlow.textContent = formatted;
+    }
 }
 
+function playAlertSound() {
+    try {
+        const url = alertSoundUrl || 'alert.mp3';
+        alertAudio.src = url;
+        alertAudio.currentTime = 0;
+        alertAudio.play().catch(() => { /* ignore autoplay block */ });
+    } catch (e) { /* ignore */ }
+}
+
+function updatePlayPauseIcon() {
+    if (isRunning) {
+        playIcon.style.display = 'none';
+        pauseIcon.style.display = '';
+    } else {
+        playIcon.style.display = '';
+        pauseIcon.style.display = 'none';
+    }
+}
+
+// ─── Time Inputs ───
 function setTimeInputs() {
     const hours = Math.floor(elapsedTime / 3600000);
     const minutes = Math.floor((elapsedTime % 3600000) / 60000);
@@ -92,23 +211,6 @@ function setTimeInputs() {
     minutesInput.value = minutes.toString().padStart(2, '0');
     secondsInput.value = seconds.toString().padStart(2, '0');
 }
-
-function setFontNameInput() {
-    const fontFamily = document.body.style.fontFamily;
-    fontNameInput.value = fontFamily.replace(/["']/g, '');
-}
-
-startStopButton.addEventListener('click', function () {
-    if (isRunning) {
-        stopTimer();
-    } else {
-        startTimer();
-        saveTimerDataInterval = setInterval(saveTimerDataOngoing, 1000);
-    }
-    saveTimerData();
-});
-
-resetButton.addEventListener('click', resetTimer);
 
 function getTimeValue(input) {
     return input.value ? parseInt(input.value) : 0;
@@ -119,16 +221,13 @@ function updateElapsedTime() {
     const minutes = getTimeValue(minutesInput);
     const seconds = getTimeValue(secondsInput);
     elapsedTime = (hours * 3600 + minutes * 60 + seconds) * 1000;
-    const formatted = formatTime(elapsedTime);
+    const display = timerMode === 'timer' ? countdownDuration - elapsedTime : elapsedTime;
+    const formatted = formatTime(timerMode === 'timer' ? display : elapsedTime);
     stopwatch.textContent = formatted;
     stopwatchGlow.textContent = formatted;
-    saveTimerData();
 }
 
-hoursInput.addEventListener('input', updateElapsedTime);
-minutesInput.addEventListener('input', updateElapsedTime);
-secondsInput.addEventListener('input', updateElapsedTime);
-
+// ─── Font Helpers ───
 function extractGoogleFontName(input) {
     const url = input.value;
     const regex = /https?:\/\/fonts\.googleapis\.com\/css2\?family=([^&:]+)/;
@@ -149,24 +248,382 @@ function extractGoogleFontUrl(input) {
     return '';
 }
 
-googleFontsImportInput.addEventListener('input', function () {
+// ─── Hover Overlay Buttons ───
+startStopButton.addEventListener('click', function () {
+    if (isRunning) {
+        stopTimer();
+    } else {
+        startTimer();
+    }
+    saveTimerData();
+});
+
+resetButton.addEventListener('click', function () {
+    resetModal.style.display = 'block';
+});
+
+document.getElementById('resetTimeBtn').addEventListener('click', function () {
+    hoursInput.value = '00';
+    minutesInput.value = '00';
+    secondsInput.value = '00';
+});
+
+resetYes.addEventListener('click', function () {
+    resetModal.style.display = 'none';
+    resetTimer();
+});
+
+resetNo.addEventListener('click', function () {
+    resetModal.style.display = 'none';
+});
+
+// ─── Settings Modal ───
+settingsBtn.addEventListener('click', openSettings);
+cancelSettingsButton.addEventListener('click', closeSettings);
+settingsBackdrop.addEventListener('click', closeSettings);
+saveSettingsButton.addEventListener('click', saveSettingsFromModal);
+
+function openSettings() {
+    // Populate modal fields from current state
+    populateSettingsModal();
+    settingsModal.style.display = 'block';
+}
+
+function closeSettings() {
+    // Reset all sections to collapsed so no stale max-height on reopen
+    document.querySelectorAll('.settings-section.expanded').forEach(section => {
+        section.classList.remove('expanded');
+        const body = section.querySelector('.section-body');
+        if (body) {
+            body.style.maxHeight = '0px';
+            body.style.marginBottom = '0px';
+        }
+    });
+    settingsModal.style.display = 'none';
+}
+
+function populateSettingsModal() {
+    // Timer mode
+    timerModeRadios.forEach(r => {
+        r.checked = (r.value === timerMode);
+    });
+    updateCountdownVisibility();
+    updateSetTimeLabel();
+
+    // Countdown duration
+    const cdH = Math.floor(countdownDuration / 3600000);
+    const cdM = Math.floor((countdownDuration % 3600000) / 60000);
+    const cdS = Math.floor((countdownDuration % 60000) / 1000);
+    countdownHoursInput.value = cdH.toString().padStart(2, '0');
+    countdownMinutesInput.value = cdM.toString().padStart(2, '0');
+    countdownSecondsInput.value = cdS.toString().padStart(2, '0');
+
+    allowNegativeCheckbox.checked = allowNegative;
+    playAlertCheckbox.checked = playAlert;
+    alertSoundUrlInput.value = alertSoundUrl;
+    updateAlertUrlVisibility();
+
+    // Set time
+    setTimeInputs();
+
+    // Text
+    const fontLink = document.getElementById('fontLink');
+    // googleFontsImportInput / fontNameInput already have values from state
+    fontWeightInput.value = fontWeight;
+    fontWeightValue.textContent = fontWeight;
+    textColorInput.value = textColor;
+    textColorPreview.style.background = textColor;
+    staticGlowCheckbox.checked = staticGlowEnabled;
+    staticGlowOpacityInput.value = staticGlowOpacity;
+    staticGlowValue.textContent = staticGlowOpacity;
+    toggleSubSetting(staticGlowSettings, staticGlowEnabled);
+    staticGlowColorInput.value = staticGlowColor;
+    staticGlowColorPreview.style.background = staticGlowColor;
+
+    // Gradient — disable text color/glow if gradient is on
+    updateTextInputsDisabledState();
+    gradientColor1Preview.style.background = gradientColor1Input.value;
+    gradientColor2Preview.style.background = gradientColor2Input.value;
+
+    // OBS
+    // Already has values from state
+}
+
+function saveSettingsFromModal() {
+    // Read timer mode
+    timerModeRadios.forEach(r => {
+        if (r.checked) timerMode = r.value;
+    });
+
+    // Read countdown duration
+    const cdH = getTimeValue(countdownHoursInput);
+    const cdM = getTimeValue(countdownMinutesInput);
+    const cdS = getTimeValue(countdownSecondsInput);
+    countdownDuration = (cdH * 3600 + cdM * 60 + cdS) * 1000;
+
+    allowNegative = allowNegativeCheckbox.checked;
+    playAlert = playAlertCheckbox.checked;
+    alertSoundUrl = alertSoundUrlInput.value.trim();
+
+    // Set time
+    updateElapsedTime();
+
+    // Clamp: if in timer mode and negative not allowed, don't let elapsed exceed countdown
+    if (timerMode === 'timer' && !allowNegative) {
+        if (elapsedTime > countdownDuration) {
+            elapsedTime = countdownDuration;
+            setTimeInputs();
+        }
+    }
+
+    // Font
     const extractedUrl = extractGoogleFontUrl(googleFontsImportInput);
     if (extractedUrl && extractedUrl !== googleFontsImportInput.value) {
         googleFontsImportInput.value = extractedUrl;
     }
     const fontLink = document.getElementById('fontLink');
     fontLink.href = googleFontsImportInput.value;
-    fontNameInput.value = extractGoogleFontName(googleFontsImportInput);
-    document.body.style.fontFamily = fontNameInput.value;
+    if (googleFontsImportInput.value) {
+        const autoName = extractGoogleFontName(googleFontsImportInput);
+        if (autoName && !fontNameInput.value) {
+            fontNameInput.value = autoName;
+        }
+    }
+    document.body.style.fontFamily = fontNameInput.value || 'Arial, sans-serif';
+    fontWeight = fontWeightInput.value;
+    document.body.style.fontWeight = fontWeight;
+    textColor = textColorInput.value;
+    staticGlowEnabled = staticGlowCheckbox.checked;
+    staticGlowOpacity = parseInt(staticGlowOpacityInput.value) || 3;
+    staticGlowColor = staticGlowColorInput.value;
+
+    // Gradient
+    if (animGradientCheckbox.checked) {
+        startGradientAnimation();
+    } else {
+        stopGradientAnimation();
+        applyTextAppearance();
+    }
+
+    // OBS
+    if (obsWsEnabledCheckbox.checked && !obsConnected) {
+        connectObs();
+    } else if (!obsWsEnabledCheckbox.checked && obsConnected) {
+        disconnectObs('Disabled');
+    }
+
+    alertPlayed = false;
+
     saveTimerData();
+    closeSettings();
+
+    // Refresh display
+    if (!isRunning) {
+        if (timerMode === 'timer') {
+            const display = countdownDuration - elapsedTime;
+            const formatted = formatTime(display);
+            stopwatch.textContent = formatted;
+            stopwatchGlow.textContent = formatted;
+        } else {
+            const formatted = formatTime(elapsedTime);
+            stopwatch.textContent = formatted;
+            stopwatchGlow.textContent = formatted;
+        }
+    }
+}
+
+// ─── Collapsible Sections ───
+document.querySelectorAll('.section-header').forEach(header => {
+    header.addEventListener('click', function () {
+        const section = this.closest('.settings-section');
+        const body = section.querySelector('.section-body');
+
+        if (section.classList.contains('expanded')) {
+            // Collapse: set max-height to current scrollHeight first, then to 0
+            body.style.maxHeight = body.scrollHeight + 'px';
+            body.style.marginBottom = '14px';
+            // Force reflow so the browser registers the current max-height
+            body.offsetHeight;
+            body.style.maxHeight = '0px';
+            body.style.marginBottom = '0px';
+            section.classList.remove('expanded');
+        } else {
+            // Expand: set max-height to scrollHeight
+            section.classList.add('expanded');
+            body.style.maxHeight = body.scrollHeight + 'px';
+            body.style.marginBottom = '14px';
+            // After transition, keep max-height at final scrollHeight
+            const onEnd = (e) => {
+                if (e.propertyName !== 'max-height') return;
+                if (section.classList.contains('expanded')) {
+                    body.style.maxHeight = body.scrollHeight + 'px';
+                    body.style.marginBottom = '14px';
+                }
+                body.removeEventListener('transitionend', onEnd);
+            };
+            body.addEventListener('transitionend', onEnd);
+        }
+    });
 });
 
-fontNameInput.addEventListener('input', function () {
-    document.body.style.fontFamily = fontNameInput.value;
-    saveTimerData();
+// ─── Timer Mode Radio Toggle ───
+timerModeRadios.forEach(r => {
+    r.addEventListener('change', function () {
+        updateCountdownVisibility();
+        updateSetTimeLabel();
+    });
 });
 
-// Animated gradient functions
+function updateSetTimeLabel() {
+    const selected = document.querySelector('input[name="timerMode"]:checked');
+    setTimeLabel.textContent = (selected && selected.value === 'timer') ? 'Set Time Elapsed' : 'Set Time';
+}
+
+function updateCountdownVisibility() {
+    const selected = document.querySelector('input[name="timerMode"]:checked');
+    const show = selected && selected.value === 'timer';
+    toggleSubSetting(countdownSettings, show);
+}
+
+playAlertCheckbox.addEventListener('change', updateAlertUrlVisibility);
+
+function updateAlertUrlVisibility() {
+    toggleSubSetting(alertUrlRow, playAlertCheckbox.checked);
+}
+
+// Toggle a sub-setting's visibility and recalculate the parent section-body
+function toggleSubSetting(el, show) {
+    const displayType = el.classList.contains('setting-row') ? 'flex' : 'block';
+    const body = el.closest('.section-body');
+    const section = body ? body.closest('.settings-section') : null;
+    const isExpanded = section && section.classList.contains('expanded');
+
+    if (show) {
+        el.style.display = displayType;
+        // If section is open, grow to fit
+        if (body && isExpanded) {
+            body.style.maxHeight = body.scrollHeight + 'px';
+        }
+    } else {
+        if (body && isExpanded) {
+            // Measure before hiding
+            const childHeight = el.offsetHeight;
+            const style = getComputedStyle(el);
+            const margin = parseFloat(style.marginTop) + parseFloat(style.marginBottom);
+            const currentHeight = body.scrollHeight;
+            // Lock, hide, animate
+            body.style.maxHeight = currentHeight + 'px';
+            body.offsetHeight;
+            setTimeout(() => { el.style.display = 'none'; }, 350);
+            body.style.maxHeight = (currentHeight - childHeight - margin) + 'px';
+        } else {
+            // Section not expanded — just set display for when it opens later
+            el.style.display = 'none';
+        }
+    }
+}
+
+// ─── Font Weight Slider ───
+fontWeightInput.addEventListener('input', function () {
+    fontWeightValue.textContent = this.value;
+});
+
+// ─── Text Color Preview ───
+textColorInput.addEventListener('input', function () {
+    const val = this.value.trim();
+    if (/^#[0-9a-fA-F]{3,8}$/.test(val)) {
+        textColorPreview.style.background = val;
+    }
+});
+
+// ─── Static Glow Toggle / Slider ───
+staticGlowCheckbox.addEventListener('change', function () {
+    toggleSubSetting(staticGlowSettings, this.checked);
+});
+
+staticGlowOpacityInput.addEventListener('input', function () {
+    staticGlowValue.textContent = this.value;
+});
+
+// ─── Disable text color/glow when animated gradient is on ───
+animGradientCheckbox.addEventListener('change', updateTextInputsDisabledState);
+
+function updateTextInputsDisabledState() {
+    const gradientOn = animGradientCheckbox.checked;
+    textColorInput.disabled = gradientOn;
+    staticGlowCheckbox.disabled = gradientOn;
+    staticGlowOpacityInput.disabled = gradientOn;
+    staticGlowColorInput.disabled = gradientOn;
+}
+
+// ─── Color Preview Listeners ───
+function addColorPreviewListener(input, preview) {
+    input.addEventListener('input', function () {
+        const val = this.value.trim();
+        if (/^#[0-9a-fA-F]{3,8}$/.test(val)) {
+            preview.style.background = val;
+        }
+    });
+}
+addColorPreviewListener(staticGlowColorInput, staticGlowColorPreview);
+addColorPreviewListener(gradientColor1Input, gradientColor1Preview);
+addColorPreviewListener(gradientColor2Input, gradientColor2Preview);
+
+// ─── Google Fonts live update in modal ───
+googleFontsImportInput.addEventListener('input', function () {
+    const extractedUrl = extractGoogleFontUrl(googleFontsImportInput);
+    if (extractedUrl && extractedUrl !== googleFontsImportInput.value) {
+        googleFontsImportInput.value = extractedUrl;
+    }
+    const name = extractGoogleFontName(googleFontsImportInput);
+    if (name) {
+        fontNameInput.value = name;
+    }
+});
+
+// ─── Export / Import ───
+exportBtn.addEventListener('click', function () {
+    const data = buildSaveData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'obs-stopwatch-settings.json';
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+importBtn.addEventListener('click', function () {
+    importFile.click();
+});
+
+importFile.addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (ev) {
+        try {
+            const data = JSON.parse(ev.target.result);
+            applyLoadedData(data);
+            saveTimerData();
+            populateSettingsModal();
+        } catch (err) {
+            alert('Invalid settings file.');
+        }
+    };
+    reader.readAsText(file);
+    importFile.value = '';
+});
+
+// ─── OBS Connect Button ───
+obsWsConnectButton.addEventListener('click', function () {
+    if (!obsWsEnabledCheckbox.checked) {
+        obsWsEnabledCheckbox.checked = true;
+    }
+    connectObs();
+});
+
+// ─── Animated Gradient ───
 function hexToRgb(hex) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
@@ -213,10 +670,8 @@ function startGradientAnimation() {
 
         const gradient = `linear-gradient(215deg, rgb(${c1.r},${c1.g},${c1.b}), rgb(${c2.r},${c2.g},${c2.b}))`;
 
-        // Advanced dual-color glow matching the gradient
         const glowColor1 = `rgba(${c1.r},${c1.g},${c1.b},${glowOpacity})`;
         const glowColor2 = `rgba(${c2.r},${c2.g},${c2.b},${glowOpacity})`;
-        // Blended middle color for smoother transition
         const midColor = getColor(c1, c2, 0.5);
         const glowColorMid = `rgba(${midColor.r},${midColor.g},${midColor.b},${glowOpacity * 0.7})`;
 
@@ -226,7 +681,6 @@ function startGradientAnimation() {
         stopwatch.style.backgroundClip = 'text';
         stopwatch.style.textShadow = 'none';
 
-        // Apply glow to separate background layer
         if (glowOpacity > 0) {
             stopwatchGlow.style.color = 'transparent';
             stopwatchGlow.style.textShadow = `
@@ -254,7 +708,6 @@ function stopGradientAnimation() {
         cancelAnimationFrame(gradientAnimationId);
         gradientAnimationId = null;
     }
-    // Reset styles
     stopwatch.style.background = '';
     stopwatch.style.webkitBackgroundClip = '';
     stopwatch.style.webkitTextFillColor = '';
@@ -264,99 +717,7 @@ function stopGradientAnimation() {
     stopwatchGlow.style.color = '';
 }
 
-animGradientCheckbox.addEventListener('change', function () {
-    if (animGradientCheckbox.checked) {
-        startGradientAnimation();
-        gradientColor1Input.disabled = false;
-        gradientColor2Input.disabled = false;
-        gradientSpeedInput.disabled = false;
-        gradientGlowInput.disabled = false;
-    } else {
-        stopGradientAnimation();
-        gradientColor1Input.disabled = true;
-        gradientColor2Input.disabled = true;
-        gradientSpeedInput.disabled = true;
-        gradientGlowInput.disabled = true;
-    }
-    saveTimerData();
-});
-
-gradientColor1Input.addEventListener('input', function () {
-    if (animGradientCheckbox.checked) {
-        startGradientAnimation();
-    }
-    saveTimerData();
-});
-
-gradientColor2Input.addEventListener('input', function () {
-    if (animGradientCheckbox.checked) {
-        startGradientAnimation();
-    }
-    saveTimerData();
-});
-
-gradientSpeedInput.addEventListener('input', function () {
-    if (animGradientCheckbox.checked) {
-        startGradientAnimation();
-    }
-    saveTimerData();
-});
-
-gradientGlowInput.addEventListener('input', function () {
-    if (animGradientCheckbox.checked) {
-        startGradientAnimation();
-    }
-    saveTimerData();
-});
-
-obsWsEnabledCheckbox.addEventListener('change', function () {
-    if (!obsWsEnabledCheckbox.checked) {
-        disconnectObs('Disabled');
-    }
-    saveTimerData();
-});
-
-obsWsConnectButton.addEventListener('click', function () {
-    if (!obsWsEnabledCheckbox.checked) {
-        obsWsEnabledCheckbox.checked = true;
-    }
-    connectObs();
-    saveTimerData();
-});
-
-obsWsHostInput.addEventListener('input', saveTimerData);
-obsWsPortInput.addEventListener('input', saveTimerData);
-obsWsPasswordInput.addEventListener('input', saveTimerData);
-obsWsRealmInput.addEventListener('input', saveTimerData);
-
-function disableSettings() {
-    hoursInput.disabled = true;
-    minutesInput.disabled = true;
-    secondsInput.disabled = true;
-    googleFontsImportInput.disabled = true;
-    fontNameInput.disabled = true;
-    animGradientCheckbox.disabled = true;
-    gradientColor1Input.disabled = true;
-    gradientColor2Input.disabled = true;
-    gradientSpeedInput.disabled = true;
-    gradientGlowInput.disabled = true;
-}
-
-function enableSettings() {
-    hoursInput.disabled = false;
-    minutesInput.disabled = false;
-    secondsInput.disabled = false;
-    googleFontsImportInput.disabled = false;
-    fontNameInput.disabled = false;
-    animGradientCheckbox.disabled = false;
-    if (animGradientCheckbox.checked) {
-        gradientColor1Input.disabled = false;
-        gradientColor2Input.disabled = false;
-        gradientSpeedInput.disabled = false;
-        gradientGlowInput.disabled = false;
-    }
-}
-
+// ─── OBS WebSocket ───
 function setObsStatus(text, color) {
     obsWsStatus.textContent = text;
     obsWsStatus.style.backgroundColor = color;
@@ -404,11 +765,20 @@ function handleCustomEvent(eventData) {
         case 'toggle':
             isRunning ? stopTimer() : startTimer();
             break;
-        case 'set': {
-            const ms = Number(eventData.milliseconds || eventData.ms || 0);
+        case 'set_elapsed': {
+            var ms = Number(eventData.milliseconds || eventData.ms || 0);
+            const s = Number(eventData.seconds || eventData.s || 0);
+            const m = Number(eventData.minutes || eventData.m || 0);
+            const h = Number(eventData.hours || eventData.h || 0);
+            ms += s * 1000 + m * 60 * 1000 + h * 60 * 60 * 1000;
+
             if (!Number.isNaN(ms) && ms >= 0) {
                 elapsedTime = ms;
-                const formatted = formatTime(elapsedTime);
+                // Clamp if negative not allowed in timer mode
+                if (timerMode === 'timer' && !allowNegative && elapsedTime > countdownDuration) {
+                    elapsedTime = countdownDuration;
+                }
+                const formatted = formatTime(timerMode === 'timer' ? countdownDuration - elapsedTime : elapsedTime);
                 stopwatch.textContent = formatted;
                 stopwatchGlow.textContent = formatted;
                 setTimeInputs();
@@ -416,15 +786,70 @@ function handleCustomEvent(eventData) {
             }
             break;
         }
+        case 'set_countdown': {
+            timerMode = 'timer';
+            var ms = Number(eventData.milliseconds || eventData.ms || 0);
+            const s = Number(eventData.seconds || eventData.s || 0);
+            const m = Number(eventData.minutes || eventData.m || 0);
+            const h = Number(eventData.hours || eventData.h || 0);
+            ms += s * 1000 + m * 60 * 1000 + h * 60 * 60 * 1000;
+
+            if (!Number.isNaN(ms) && ms >= 0) {
+                countdownDuration = ms;
+                // Clamp elapsed if negative not allowed
+                if (!allowNegative && elapsedTime > countdownDuration) {
+                    elapsedTime = countdownDuration;
+                }
+                if (timerMode === 'timer' && !isRunning) {
+                    const display = countdownDuration - elapsedTime;
+                    stopwatch.textContent = formatTime(display);
+                    stopwatchGlow.textContent = formatTime(display);
+                }
+                saveTimerData();
+            }
+            break;
+        }
+        // Stopwatch-specific commands
+        case 'stopwatch_start':
+            timerMode = 'stopwatch';
+            startTimer();
+            saveTimerData();
+            break;
+        case 'stopwatch_stop':
+            timerMode = 'stopwatch';
+            stopTimer();
+            saveTimerData();
+            break;
+        case 'stopwatch_toggle':
+            timerMode = 'stopwatch';
+            isRunning ? stopTimer() : startTimer();
+            saveTimerData();
+            break;
+        // Countdown-specific commands
+        case 'countdown_start':
+            timerMode = 'timer';
+            alertPlayed = false;
+            startTimer();
+            saveTimerData();
+            break;
+        case 'countdown_stop':
+            timerMode = 'timer';
+            stopTimer();
+            saveTimerData();
+            break;
+        case 'countdown_toggle':
+            timerMode = 'timer';
+            alertPlayed = false;
+            isRunning ? stopTimer() : startTimer();
+            saveTimerData();
+            break;
         default:
             break;
     }
 }
 
+// ─── SHA-256 (for OBS auth) ───
 async function sha256Base64(input) {
-    // Minimal SHA-256 implementation for OBS browser source (no WebCrypto)
-    // Based on the public domain implementation
-
     function bytesToBase64(bytes) {
         const lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
         let base64 = '';
@@ -456,7 +881,6 @@ async function sha256Base64(input) {
         return base64;
     }
 
-    // Convert string to UTF-8 byte array
     function stringToBytes(str) {
         const bytes = [];
         for (let i = 0; i < str.length; i++) {
@@ -513,22 +937,18 @@ async function sha256Base64(input) {
     const m = bytes.slice();
     const l = bytes.length * 8;
 
-    // Padding
     m.push(0x80);
     while ((m.length % 64) !== 56) m.push(0);
 
-    // Length (64-bit big endian)
-    m.push(0, 0, 0, 0); // high 32 bits (assuming length < 2^32)
+    m.push(0, 0, 0, 0);
     m.push((l >>> 24) & 0xff);
     m.push((l >>> 16) & 0xff);
     m.push((l >>> 8) & 0xff);
     m.push(l & 0xff);
 
-    // Initial hash
     let H0 = 0x6a09e667, H1 = 0xbb67ae85, H2 = 0x3c6ef372, H3 = 0xa54ff53a;
     let H4 = 0x510e527f, H5 = 0x9b05688c, H6 = 0x1f83d9ab, H7 = 0x5be0cd19;
 
-    // Process blocks
     for (let i = 0; i < m.length; i += 64) {
         const W = [];
 
@@ -563,7 +983,6 @@ async function sha256Base64(input) {
         H7 = (H7 + h) >>> 0;
     }
 
-    // Convert to bytes
     const hash = [
         (H0 >>> 24) & 0xff, (H0 >>> 16) & 0xff, (H0 >>> 8) & 0xff, H0 & 0xff,
         (H1 >>> 24) & 0xff, (H1 >>> 16) & 0xff, (H1 >>> 8) & 0xff, H1 & 0xff,
@@ -603,7 +1022,6 @@ async function handleObsMessage(event) {
     }
 
     if (payload.op === 0) {
-        // Hello
         if (payload.d.authentication && payload.d.authentication.challenge && !obsWsPasswordInput.value) {
             setObsStatus('Password required', '#c62828');
             disconnectObs('Password required');
@@ -635,7 +1053,6 @@ async function handleObsMessage(event) {
     }
 
     if (payload.op === 2) {
-        // Identified
         clearObsTimers();
         obsConnected = true;
         setObsStatus('Connected', '#2e7d32');
@@ -668,7 +1085,6 @@ function connectObs() {
     };
     obsSocket.onclose = (evt) => {
         let reason = 'Disconnected';
-        // Map common OBS WS close codes to clearer messages.
         if (evt && evt.code) {
             const code = evt.code;
             if (code === 4000) reason = 'Identification required';
@@ -690,12 +1106,25 @@ function connectObs() {
     };
 }
 
-function saveTimerData() {
-    const data = {
+// ─── Save / Load ───
+function buildSaveData() {
+    return {
         elapsedTime: elapsedTime,
         googleFontsImport: googleFontsImportInput.value,
         fontName: document.body.style.fontFamily,
+        fontWeight: fontWeight,
         isRunning: isRunning,
+        timerMode: timerMode,
+        countdownDuration: countdownDuration,
+        allowNegative: allowNegative,
+        playAlert: playAlert,
+        alertSoundUrl: alertSoundUrl,
+        textColor: textColor,
+        staticGlow: {
+            enabled: staticGlowEnabled,
+            opacity: staticGlowOpacity,
+            color: staticGlowColor
+        },
         obsWs: {
             enabled: obsWsEnabledCheckbox.checked,
             host: obsWsHostInput.value,
@@ -711,82 +1140,160 @@ function saveTimerData() {
             glow: gradientGlowInput.value
         }
     };
-    localStorage.setItem('timerData', JSON.stringify(data));
+}
+
+function saveTimerData() {
+    localStorage.setItem('timerData', JSON.stringify(buildSaveData()));
 }
 
 function saveTimerDataOngoing() {
-    const data = {
-        elapsedTime: Date.now() - startTime + elapsedTime,
-        googleFontsImport: googleFontsImportInput.value,
-        fontName: document.body.style.fontFamily,
-        isRunning: isRunning,
-        obsWs: {
-            enabled: obsWsEnabledCheckbox.checked,
-            host: obsWsHostInput.value,
-            port: obsWsPortInput.value,
-            realm: obsWsRealmInput.value,
-            password: obsWsPasswordInput.value
-        },
-        animGradient: {
-            enabled: animGradientCheckbox.checked,
-            color1: gradientColor1Input.value,
-            color2: gradientColor2Input.value,
-            speed: gradientSpeedInput.value,
-            glow: gradientGlowInput.value
-        }
-    };
+    const data = buildSaveData();
+    data.elapsedTime = Date.now() - startTime + elapsedTime;
     localStorage.setItem('timerData', JSON.stringify(data));
-    console.log("Data Saved. Elapsed Time: " + data.elapsedTime);
+}
+
+function applyLoadedData(data) {
+    if (!data) return;
+
+    elapsedTime = Number(data.elapsedTime) || 0;
+    googleFontsImportInput.value = data.googleFontsImport || '';
+    document.body.style.fontFamily = data.fontName || 'Arial, sans-serif';
+    fontWeight = data.fontWeight || '400';
+    document.body.style.fontWeight = fontWeight;
+    fontWeightInput.value = fontWeight;
+    fontWeightValue.textContent = fontWeight;
+
+    timerMode = data.timerMode || 'stopwatch';
+    countdownDuration = Number(data.countdownDuration) || 0;
+    allowNegative = Boolean(data.allowNegative);
+    playAlert = Boolean(data.playAlert);
+    alertSoundUrl = data.alertSoundUrl || '';
+    alertPlayed = false;
+
+    textColor = data.textColor || '#ffffff';
+    if (data.staticGlow) {
+        staticGlowEnabled = Boolean(data.staticGlow.enabled);
+        staticGlowOpacity = data.staticGlow.opacity !== undefined ? data.staticGlow.opacity : 3;
+        staticGlowColor = data.staticGlow.color || '#ffffff';
+    } else {
+        staticGlowEnabled = false;
+        staticGlowOpacity = 3;
+        staticGlowColor = '#ffffff';
+    }
+    textColorInput.value = textColor;
+    textColorPreview.style.background = textColor;
+    staticGlowCheckbox.checked = staticGlowEnabled;
+    staticGlowOpacityInput.value = staticGlowOpacity;
+    staticGlowValue.textContent = staticGlowOpacity;
+    staticGlowColorInput.value = staticGlowColor;
+    staticGlowColorPreview.style.background = staticGlowColor;
+    toggleSubSetting(staticGlowSettings, staticGlowEnabled);
+
+    isRunning = data.isRunning;
+
+    if (data.obsWs) {
+        obsWsEnabledCheckbox.checked = Boolean(data.obsWs.enabled);
+        obsWsHostInput.value = data.obsWs.host || 'localhost';
+        obsWsPortInput.value = data.obsWs.port || '4455';
+        obsWsRealmInput.value = data.obsWs.realm || 'obs-stopwatch';
+        obsWsPasswordInput.value = data.obsWs.password || '';
+    }
+    if (data.animGradient) {
+        animGradientCheckbox.checked = Boolean(data.animGradient.enabled);
+        gradientColor1Input.value = data.animGradient.color1 || '#00BFFF';
+        gradientColor2Input.value = data.animGradient.color2 || '#FF6EC7';
+        gradientSpeedInput.value = data.animGradient.speed || '10';
+        gradientGlowInput.value = data.animGradient.glow || '2';
+    }
+    if (data.animGradient && data.animGradient.enabled) {
+        startGradientAnimation();
+    } else {
+        stopGradientAnimation();
+        applyTextAppearance();
+    }
+    const fontLink = document.getElementById('fontLink');
+    fontLink.href = extractGoogleFontUrl(googleFontsImportInput);
+    fontNameInput.value = (document.body.style.fontFamily || '').replace(/["']/g, '');
+
+    setTimeInputs();
+
+    if (isRunning) {
+        isRunning = false;
+        startTimer();
+    }
+
+    if (data.obsWs && data.obsWs.enabled) {
+        connectObs();
+    } else {
+        setObsStatus('Disconnected', '#3a3a3a');
+    }
+
+    // Update display
+    if (!isRunning) {
+        if (timerMode === 'timer') {
+            const display = countdownDuration - elapsedTime;
+            stopwatch.textContent = formatTime(display);
+            stopwatchGlow.textContent = formatTime(display);
+        } else {
+            stopwatch.textContent = formatTime(elapsedTime);
+            stopwatchGlow.textContent = formatTime(elapsedTime);
+        }
+    }
 }
 
 function loadTimerData() {
-    const data = JSON.parse(localStorage.getItem('timerData'));
-    if (data) {
-        elapsedTime = Number(data.elapsedTime) || 0;
-        googleFontsImportInput.value = data.googleFontsImport;
-        document.body.style.fontFamily = data.fontName;
-        isRunning = data.isRunning;
-        if (data.obsWs) {
-            obsWsEnabledCheckbox.checked = Boolean(data.obsWs.enabled);
-            obsWsHostInput.value = data.obsWs.host || 'localhost';
-            obsWsPortInput.value = data.obsWs.port || '4455';
-            obsWsRealmInput.value = data.obsWs.realm || 'obs-stopwatch';
-            obsWsPasswordInput.value = data.obsWs.password || '';
-        }
-        if (data.animGradient) {
-            animGradientCheckbox.checked = Boolean(data.animGradient.enabled);
-            gradientColor1Input.value = data.animGradient.color1 || '#00BFFF';
-            gradientColor2Input.value = data.animGradient.color2 || '#FF6EC7';
-            gradientSpeedInput.value = data.animGradient.speed || '10';
-            gradientGlowInput.value = data.animGradient.glow || '2';
-        }
-        if (data.animGradient && data.animGradient.enabled) {
-            startGradientAnimation();
-        }
-        const fontLink = document.getElementById('fontLink');
-        fontLink.href = extractGoogleFontUrl(googleFontsImportInput);
-        setTimeInputs();
-        setFontNameInput();
-        if (isRunning) {
-            // Reset isRunning so startTimer() doesn't early-return
-            isRunning = false;
-            startTimer();
-        } else {
-            enableSettings();
-        }
-        if (data.obsWs && data.obsWs.enabled) {
-            connectObs();
-        } else {
+    const raw = localStorage.getItem('timerData');
+    if (raw) {
+        try {
+            const data = JSON.parse(raw);
+            applyLoadedData(data);
+        } catch (e) {
             setObsStatus('Disconnected', '#3a3a3a');
         }
     } else {
-        enableSettings();
         setObsStatus('Disconnected', '#3a3a3a');
     }
-    const formatted = formatTime(elapsedTime);
-    stopwatch.textContent = formatted;
-    stopwatchGlow.textContent = formatted;
+
+    // Ensure display is set
+    if (!isRunning) {
+        if (timerMode === 'timer') {
+            const display = countdownDuration - elapsedTime;
+            stopwatch.textContent = formatTime(display);
+            stopwatchGlow.textContent = formatTime(display);
+        } else {
+            const formatted = formatTime(elapsedTime);
+            stopwatch.textContent = formatted;
+            stopwatchGlow.textContent = formatted;
+        }
+    }
+
+    updatePlayPauseIcon();
 }
 
+// ─── Text Appearance (color + static glow, overridden by animated gradient) ───
+function applyTextAppearance() {
+    stopwatch.style.color = textColor;
+    stopwatch.style.background = '';
+    stopwatch.style.webkitBackgroundClip = '';
+    stopwatch.style.webkitTextFillColor = '';
+    stopwatch.style.backgroundClip = '';
+    stopwatch.style.textShadow = '';
+    stopwatchGlow.style.color = 'transparent';
+
+    if (staticGlowEnabled) {
+        const op = staticGlowOpacity / 10;
+        // Parse the glow color to get RGB values
+        var color = hexToRgb(staticGlowColor);
+        const glowCol = `rgba(${color.r},${color.g},${color.b},${op})`;
+        stopwatchGlow.style.textShadow = `
+            0 0 20px ${glowCol},
+            0 0 40px ${glowCol},
+            0 0 80px ${glowCol}
+        `;
+    } else {
+        stopwatchGlow.style.textShadow = 'none';
+    }
+}
+
+// ─── Init ───
 loadTimerData();
-stopTimer();
