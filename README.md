@@ -89,6 +89,14 @@ These switch to countdown mode and perform the action:
 
 > You can also use m/minutes, s/seconds, h/hours, ms/milliseconds in the set_elapsed and set_countdown actions.
 
+## Macros
+
+| Action                                                                | Example                                                                                                |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Switch to countdown mode, reset elapsed time, set duration, and start | `{"eventData": {"source": "obs-stopwatch", "action": "countdown_now", "m": 5}}` (sets countdown to 5m) |
+
+> You can also use m/minutes, s/seconds, h/hours, ms/milliseconds in the countdown_now action.
+
 > **Note:** If you change the realm in Settings, update `"source"` in the Stream Deck key to match.
 
 # Getting Google Fonts
@@ -105,7 +113,6 @@ These switch to countdown mode and perform the action:
 5. Click "Copy code"
 
 ![image](https://github.com/user-attachments/assets/e8d12b47-17ef-40ec-9797-6ac3cf2df720)
-
 
 6. Enter that in the "Google Fonts Code" box
 7. It should auto-populate the correct font name; but if it doesn't you can enter the font name in the "Font Name" box. In this example it would be: Archivo Black

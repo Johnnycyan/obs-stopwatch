@@ -843,6 +843,38 @@ function handleCustomEvent(eventData) {
             isRunning ? stopTimer() : startTimer();
             saveTimerData();
             break;
+        // Macros
+        case 'countdown_now': {
+            timerMode = 'timer';
+            var ms = Number(eventData.milliseconds || eventData.ms || 0);
+            const s = Number(eventData.seconds || eventData.s || 0);
+            const m = Number(eventData.minutes || eventData.m || 0);
+            const h = Number(eventData.hours || eventData.h || 0);
+            ms += s * 1000 + m * 60 * 1000 + h * 60 * 60 * 1000;
+
+            if (!Number.isNaN(ms) && ms >= 0) {
+                alertPlayed = false;
+                stopTimer();
+                countdownDuration = ms;
+                elapsedTime = 0;
+                const formatted = formatTime(countdownDuration - elapsedTime);
+                stopwatch.textContent = formatted;
+                stopwatchGlow.textContent = formatted;
+                setTimeInputs();
+                // Clamp elapsed if negative not allowed
+                if (!allowNegative && elapsedTime > countdownDuration) {
+                    elapsedTime = countdownDuration;
+                }
+                if (timerMode === 'timer' && !isRunning) {
+                    const display = countdownDuration - elapsedTime;
+                    stopwatch.textContent = formatTime(display);
+                    stopwatchGlow.textContent = formatTime(display);
+                }
+                startTimer();
+                saveTimerData();
+            }
+            break;
+        }
         default:
             break;
     }
